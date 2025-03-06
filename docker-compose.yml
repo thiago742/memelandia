@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # Eureka Server (Service Discovery)
+  eureka:
+    build: ./memelandia-eureka
+    container_name: memelandia-eureka
+    restart: always
+    ports:
+      - "8761:8761"
+    networks:
+      - memelandia-net
+
+  # Config Server (Configuração Centralizada)
+  config-server:
+    build: ./memelandia-config
+    container_name: memelandia-config
+    restart: always
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8888:8888"
+    depends_on:
+      - eureka
+    networks:
+      - memelandia-net
+
+  # API Gateway (Entrada principal da aplicação)
+  gateway:
+    build: ./memelandia-gateway
+    container_name: memelandia-gateway
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka
+      - config-server
+    networks:
+      - memelandia-net
+
+  # Microsserviço de Usuário
+  usuario-service:
+    build: ./memelandia-usuario
+    container_name: memelandia-usuario
+    restart: always
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka
+      - config-server
+    networks:
+      - memelandia-net
+
+  # Microsserviço de Memes
+  meme-service:
+    build: ./memelandia-meme
+    container_name: memelandia-meme
+    restart: always
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka
+      - config-server
+    networks:
+      - memelandia-net
+
+  # Microsserviço de Categorias
+  categoria-service:
+    build: ./memelandia-categoria
+    container_name: memelandia-categoria
+    restart: always
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - eureka
+      - config-server
+    networks:
+      - memelandia-net
+
+networks:
+  memelandia-net:
+    driver: bridge
