@@ -1,17 +1,21 @@
 package br.com.fthiago.memelandia_meme.service;
 
-import br.com.fthiago.memelandia_categoria.entity.CategoriaMeme;
 import br.com.fthiago.memelandia_meme.client.CategoriaMemeClient;
 import br.com.fthiago.memelandia_meme.client.UsuarioClient;
+import br.com.fthiago.memelandia_meme.dto.CategoriaMemeDTO;
+import br.com.fthiago.memelandia_meme.dto.UsuarioDTO;
 import br.com.fthiago.memelandia_meme.entity.Meme;
 import br.com.fthiago.memelandia_meme.repository.MemeRepository;
-import br.com.fthiago.memelandia_usuario.entity.Usuario;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
+import feign.FeignException;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class MemeService {
@@ -25,20 +29,24 @@ public class MemeService {
     private CategoriaMemeClient categoriaMemeClient;
 
     public Meme novoMeme(Meme meme) {
-        // Verifica se o usuário existe
-        ResponseEntity<Usuario> usuarioResponse = usuarioClient.buscarUsuarioPorId(meme.getUsuarioId());
-        if (!usuarioResponse.getStatusCode().is2xxSuccessful()) {
-            throw new RuntimeException("Usuário não encontrado");
+        if (meme.getUsuarioId() == null || meme.getCategoriaMemeId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "IDs de usuário e categoria são obrigatórios");
         }
 
-        // Verifica se a categoria existe
-        ResponseEntity<CategoriaMeme> categoriaResponse = categoriaMemeClient.buscarCategoriaPorId(meme.getCategoriaMemeId());
-        if (!categoriaResponse.getStatusCode().is2xxSuccessful()) {
-            throw new RuntimeException("Categoria não encontrada");
-        }
+        try {
+            // Verifica se o usuário existe
+            UsuarioDTO usuario = usuarioClient.buscarUsuarioPorId(meme.getUsuarioId()).getBody();
 
-        // Salva o meme
-        return memeRepository.save(meme);
+            // Verifica se a categoria existe
+            CategoriaMemeDTO categoria = categoriaMemeClient.buscarCategoriaPorId(meme.getCategoriaMemeId()).getBody();
+
+            // Salva o meme
+            return memeRepository.save(meme);
+        } catch (FeignException.NotFound e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário ou categoria não encontrado", e);
+        } catch (FeignException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao comunicar com outro microsserviço", e);
+        }
     }
 
     public List<Meme> listaTodosMemes() {
