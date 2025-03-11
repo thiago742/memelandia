@@ -13,8 +13,8 @@ services:
 
   # Config Server (Configuração Centralizada)
   config-server:
-    build: ./memelandia-config
-    container_name: memelandia-config
+    build: ./memelandia-config-server
+    container_name: memelandia-config-server
     restart: always
     environment:
       SPRING_PROFILES_ACTIVE: docker
